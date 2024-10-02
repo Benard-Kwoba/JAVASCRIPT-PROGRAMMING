@@ -1,0 +1,91 @@
+// Create a new Date object to capture the current date and time
+const dateAndTime = new Date();
+
+// Define a sleep function that returns a promise resolving after 'ms' milliseconds
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Define an asynchronous function for Coop-Bank conversions
+async function coopBankConversions(userBalance) {
+    const date = dateAndTime; // Store the current date and time
+    const usdInKshs = 0.0069; // Conversion rate from Kshs to USD
+    const bankConversionRate = 0.043; // Conversion fee rate
+
+    // Define a nested asynchronous function for USD to Kshs conversion
+    async function usdKshsConversion(availableBalanceInKshs) {
+        // Calculate the amount in USD before applying the conversion fee
+        const convertedAmount = parseFloat(availableBalanceInKshs * usdInKshs);
+        
+        // Prompt the user for confirmation to proceed with the conversion
+        const userSelection = prompt(`
+COOP-BANK: KSHS-USD TRANSACTION STATEMENT
+Amount to convert: ${availableBalanceInKshs.toFixed(2)} Kshs
+Amount in USD before conversion fee: ${convertedAmount.toFixed(2)} USD
+Coop-Bank USD-KSHS conversion rate: ${bankConversionRate}
+REPLY WITH:
+1 - To proceed with conversion
+0 - To exit`);
+
+        // Handle user selection
+        if (userSelection === "1") {
+            return convertedAmount; // Proceed with the conversion
+        } else if (userSelection === "0") {
+            console.log("Cancelling conversion process...\n");
+            await sleep(3000); // Wait for 3 seconds before cancelling
+            return null; // Indicate cancellation
+        } else {
+            console.log("Invalid input. You did not enter '1' to proceed or '0' to exit.");
+            return null; // Indicate invalid input
+        }
+    }
+
+    // Await the user's decision on whether to proceed with the conversion
+    const userInput = await usdKshsConversion(userBalance);
+    
+    // If the user cancels or provides invalid input, return a cancellation message
+    if (userInput === null) {
+        return "Conversion process cancelled.\nThank you for banking with us";
+    }
+
+    // Calculate the conversion fee in Kshs
+    const bankConversionFeeInKshs = bankConversionRate * userInput;
+    
+    // Calculate the final amount after deducting the conversion fee
+    const amountAfterBankRate = userInput - bankConversionFeeInKshs;
+
+    // Return a formatted acknowledgment message with transaction details
+    return `
+COOP-BANK: ACKNOWLEDGEMENT OF CONVERSION
+You have successfully converted ${userBalance.toFixed(2)} Kshs to USD
+
+Your account balance in USD: ${amountAfterBankRate.toFixed(2)} USD
+Transaction Date and Time: ${dateAndTime}
+
+Thank you for banking with us.
+`;
+}
+
+// Define the main asynchronous function to execute the conversion process
+async function main() {
+    try {
+        // Prompt the user to enter the amount in Kshs to convert to USD
+        const userInput = parseFloat(prompt('Enter amount in Kshs to convert to USD: '));
+        
+        // Check if the input is a valid number
+        if (isNaN(userInput)) {
+            throw new Error('Invalid input'); // Throw an error for invalid input
+        }
+        
+        // Await the conversion process and log the result
+        console.log(await coopBankConversions(userInput));
+    } catch (error) {
+        // Handle any errors that occur during the conversion process
+        console.log('Only numbers allowed.\n\nTerminating conversion...');
+        await sleep(3000); // Wait for 3 seconds before terminating
+        console.log('Conversion Terminated');
+    }
+}
+
+// Execute the main function to start the application
+main();
