@@ -1,0 +1,50 @@
+// Base class for a person
+class Person {
+    constructor(firstName, lastName) {
+        this._firstName = firstName; // Initialize the private first name
+        this._lastName = lastName;   // Initialize the private last name
+    }
+
+    // Getter for fullName
+    get fullName() {
+        return `${this._firstName} ${this._lastName}`; // Return the full name
+    }
+
+    // Setter for fullName
+    set fullName(name) {
+        const parts = name.split(' '); // Split the full name into parts
+        this._firstName = parts[0];     // Set first name
+        this._lastName = parts[1] || ''; // Set last name (default to empty if not provided)
+    }
+
+    // Method to display person's information
+    displayInfo() {
+        console.log(`Person: ${this.fullName}`); // Use the getter to access fullName
+    }
+}
+
+// Derived class for an employee, inheriting from Person
+class Employee extends Person {
+    constructor(firstName, lastName, position) {
+        super(firstName, lastName); // Call the parent constructor
+        this._position = position;   // Initialize the private position
+    }
+
+    // Method to display employee's information including position
+    displayInfo() {
+        console.log(`Employee: ${this.fullName}, Position: ${this._position}`); // Use the getter to access fullName
+    }
+}
+
+// Create an instance of Person
+const person1 = new Person('John', 'Doe');
+console.log(person1.fullName); // Output: John Doe
+person1.fullName = 'Jane Smith'; // Use the setter to change the full name
+console.log(person1._firstName); // Output: Jane
+console.log(person1._lastName); // Output: Smith
+person1.displayInfo(); // Output: Person: Jane Smith
+
+// Create an instance of Employee
+const employee1 = new Employee('Alice', 'Johnson', 'Software Engineer');
+console.log(employee1.fullName); // Output: Alice Johnson
+employee1.displayInfo(); // Output: Employee: Alice Johnson, Position: Software Engineer
