@@ -1,0 +1,86 @@
+/*
+Imagine you need to perform multiple asynchronous tasks, such as fetching user data, fetching posts, and fetching comments, 
+all at the same time. Once all tasks are complete, you want to process the combined results. Here's how you can achieve this using callbacks.
+*/
+// Simulate fetching user data
+function fetchUserData(callback) {
+    setTimeout(() => {
+        console.log("User data fetched.");
+        // Simulate successful fetch
+        callback(null, { userId: 1, name: "John Doe" });
+        // To simulate an error, uncomment the line below:
+        // callback(new Error("Failed to fetch user data"), null);
+    }, 1000);
+}
+
+// Simulate fetching posts for a user
+function fetchPosts(userId, callback) {
+    setTimeout(() => {
+        console.log(`Posts fetched for user ID: ${userId}`);
+        // Simulate successful fetch
+        callback(null, [
+            { postId: 101, title: "Post 1" },
+            { postId: 102, title: "Post 2" }
+        ]);
+        // To simulate an error, uncomment the line below:
+        // callback(new Error("Failed to fetch posts"), null);
+    }, 1500);
+}
+
+// Simulate fetching comments for a post
+function fetchComments(postId, callback) {
+    setTimeout(() => {
+        console.log(`Comments fetched for post ID: ${postId}`);
+        // Simulate successful fetch
+        callback(null, [
+            { commentId: 1001, text: "Great post!" },
+            { commentId: 1002, text: "Very informative." }
+        ]);
+        // To simulate an error, uncomment the line below:
+        // callback(new Error("Failed to fetch comments"), null);
+    }, 1200);
+}
+
+// Implementing a simple parallel control flow
+function parallel(tasks, finalCallback) {
+    let results = [];
+    let completed = 0;
+    let hasError = false;
+
+    tasks.forEach((task, index) => {
+        task((err, result) => {
+            if (hasError) return;
+
+            if (err) {
+                hasError = true;
+                finalCallback(err, null);
+                return;
+            }
+
+            results[index] = result;
+            completed += 1;
+
+            if (completed === tasks.length) {
+                finalCallback(null, results);
+            }
+        });
+    });
+}
+
+// Using the parallel function to execute tasks simultaneously
+parallel([
+    fetchUserData,
+    function(callback) { fetchPosts(1, callback); },
+    function(callback) { fetchComments(101, callback); }
+], (err, results) => {
+    if (err) {
+        console.error("An error occurred:", err.message);
+        return;
+    }
+
+    const [userData, posts, comments] = results;
+    console.log("\nAll data fetched successfully:");
+    console.log("User Data:", userData);
+    console.log("Posts:", posts);
+    console.log("Comments:", comments);
+});
