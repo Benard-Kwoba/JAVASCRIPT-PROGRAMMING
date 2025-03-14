@@ -1,0 +1,127 @@
+/*
+==================================================================
+SAP GUI Data Extraction Script Migration - VBScript to JScript
+This script is a migration of an earlier VBScript to JScript for automating the extraction of data from SAP GUI.
+
+The main purpose of this script is to:
+1. Automate the process of extracting data from SAP GUI and saving it into an Excel (.XLS) file.
+2. Check if a file already exists and generate a unique name for the file if necessary to avoid overwriting existing data.
+3. Interact with SAP GUI through the SAP Scripting Engine to navigate through transaction codes and SAP screens.
+4. Select the correct data export format (Excel Spreadsheet) and specify the export path dynamically.
+5. Save the exported data to a designated folder on the local machine.
+6. Provide feedback on the file name and export path for tracking and validation.
+
+The script performs the following steps:
+- Checks the directory for any existing files with the intended name and appends a counter to generate a unique file name.
+- Connects to the SAP GUI via the Scripting Engine and performs SAP transactions to navigate to the required data.
+- Configures the export settings to output the data in Excel format.
+- Saves the exported data to a file on the local system with the dynamically generated file name.
+
+This migration from VBScript to JScript involves adapting the script to JScript's syntax and object model while preserving the core functionality of automating SAP data extraction and export.
+==================================================================
+*/
+
+
+var SapGuiAuto, application, connection, session, WScriptShell, fso; // Declares variables for SAP GUI automation, file handling, and WScript
+
+var exportPath = "C:\\Users\\OtienBer\\Desktop\\"; // Directory path where the file will be saved
+var baseFileName = "GRNs"; // Base name of the file to be exported
+var fileExtension = ".XLS"; // File extension (.XLS for Excel format)
+var finalFileName = baseFileName + fileExtension; // Final file name combining base name and extension (GRNs.XLS)
+var fullPath = exportPath + finalFileName; // Full path to the file, combining directory and filename
+
+fso = new ActiveXObject("Scripting.FileSystemObject"); // Creates FileSystemObject (fso) for handling files
+
+// Function to generate a unique filename if the file already exists
+function getUniqueFileName(baseName, extension, path) {
+    var counter = 1; // Initialize counter for creating a unique file name
+    var tempName = baseName + extension; // Create initial file name (e.g., GRNS.XLS)
+    while (fso.FileExists(path + tempName)) { // Check if the file already exists
+        counter++; // Increment counter if file exists
+        tempName = baseName + counter + extension; // Append counter to the base name for uniqueness
+    }
+    return tempName; // Return the unique file name
+}
+
+// Check if the file already exists, and if so, generate a unique name
+if (fso.FileExists(fullPath)) { // If the file exists
+    finalFileName = getUniqueFileName(baseFileName, fileExtension, exportPath); // Get a unique file name
+    fullPath = exportPath + finalFileName; // Update the full file path with the new unique name
+}
+
+WScript.Echo("Final file name will be: " + finalFileName); // Output the final file name for logging/debugging
+
+// === SAP GUI Automation starts here ===
+
+// Get the SAP GUI Scripting Engine to interact with SAP
+SapGuiAuto = GetObject("SAPGUI"); // Get the SAP GUI object
+application = SapGuiAuto.GetScriptingEngine(); // Get the SAP Scripting Engine
+connection = application.Children(0); // Get the first connection (if multiple connections open)
+session = connection.Children(0); // Get the first session under the connection
+
+// Optional: Connect WScript event handlers if running via WScript
+try {
+    if (typeof WScript !== "undefined") { // If running in Windows Script Host
+        WScript.ConnectObject(session, "on"); // Connect the session object to WScript
+        WScript.ConnectObject(application, "on"); // Connect the application object to WScript
+    }
+} catch (e) { // If WScript is not defined (e.g., not running via WScript Host), do nothing
+    // Ignore if WScript is not defined (run outside Windows Script Host)
+}
+
+// === SAP GUI Automation Steps: For data extraction in SAP TCode SE16N for LIKP ===
+
+// Maximize the SAP window to ensure visibility for automation
+session.findById("wnd[0]").maximize(); 
+
+// Enter transaction code SE16N in the command field to access the data table view
+session.findById("wnd[0]/tbar[0]/okcd").text = "/nse16n"; // Set transaction code
+session.findById("wnd[0]").sendVKey(0); // Press Enter (VKey 0) to execute
+
+// Handle the next screen by sending another Enter key (VKey 0)
+session.findById("wnd[1]").sendVKey(0); 
+
+// Enter the table name (LIKP) into the corresponding input field
+session.findById("wnd[0]/usr/ctxtGD-TAB").text = "LIKP"; // Set the table name
+session.findById("wnd[0]").sendVKey(0); // Press Enter to load the table
+
+// Enter a specific variant ("BANAYAHU") into the variant field
+session.findById("wnd[0]/usr/ctxtGD-VARIANT").text = "BANAYAHU"; // Set the variant
+session.findById("wnd[0]/usr/ctxtGD-VARIANT").setFocus(); // Set focus on the variant field
+session.findById("wnd[0]/usr/ctxtGD-VARIANT").caretPosition = 8; // Set the caret (cursor) position
+session.findById("wnd[0]").sendVKey(0); // Press Enter to confirm the variant
+
+// Clear any previous value in the "Max lines" field
+session.findById("wnd[0]/usr/txtGD-MAX_LINES").text = ""; // Clear the Max lines field
+session.findById("wnd[0]/usr/txtGD-MAX_LINES").setFocus(); // Set focus on the field
+session.findById("wnd[0]/usr/txtGD-MAX_LINES").caretPosition = 1; // Set the caret position in the field
+session.findById("wnd[0]").sendVKey(0); // Press Enter to execute the change
+
+// Focus on the button to push the next step in the table
+session.findById("wnd[0]/usr/tblSAPLSE16NSELFIELDS_TC/btnPUSH[4,1]").setFocus(); // Focus on the button
+session.findById("wnd[0]/usr/tblSAPLSE16NSELFIELDS_TC/btnPUSH[4,1]").press(); // Press the button
+
+// Click the "Export" button to export the data
+session.findById("wnd[1]/tbar[0]/btn[24]").press(); // Press the Export button
+session.findById("wnd[1]/tbar[0]/btn[8]").press(); // Confirm the Export
+
+// Press the "Execute" button to trigger the export
+session.findById("wnd[0]/tbar[1]/btn[8]").press(); // Press the Execute button
+
+// Select the export option to save the data
+session.findById("wnd[0]/usr/cntlRESULT_LIST/shellcont/shell").pressToolbarContextButton("&MB_EXPORT"); // Click on the toolbar context menu for export
+session.findById("wnd[0]/usr/cntlRESULT_LIST/shellcont/shell").selectContextMenuItem("&PC"); // Select the PC (local file) export option
+
+// Select the Spreadsheet format for the export
+session.findById("wnd[1]/usr/subSUBSCREEN_STEPLOOP:SAPLSPO5:0150/sub:SAPLSPO5:0150/radSPOPLI-SELFLAG[1,0]").select(); // Choose the Spreadsheet format
+session.findById("wnd[1]/usr/subSUBSCREEN_STEPLOOP:SAPLSPO5:0150/sub:SAPLSPO5:0150/radSPOPLI-SELFLAG[1,0]").setFocus(); // Set focus on the format radio button
+session.findById("wnd[1]/tbar[0]/btn[0]").press(); // Press the OK button to confirm the selection
+
+// Set the export file path and filename dynamically
+session.findById("wnd[1]/usr/ctxtDY_PATH").text = exportPath; // Set the export path
+session.findById("wnd[1]/usr/ctxtDY_FILENAME").text = finalFileName; // Set the filename dynamically
+session.findById("wnd[1]/usr/ctxtDY_FILENAME").caretPosition = finalFileName.length; // Set the caret at the end of the filename
+session.findById("wnd[1]/tbar[0]/btn[0]").press(); // Press the "Save" button to export the file
+
+// End of Script: Output the final path where the file was saved
+WScript.Echo("Export completed to: " + fullPath); // Log the full path of the exported file
