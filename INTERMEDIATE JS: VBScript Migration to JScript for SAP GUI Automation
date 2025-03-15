@@ -21,7 +21,6 @@ This migration from VBScript to JScript involves adapting the script to JScript'
 ==================================================================
 */
 
-
 var SapGuiAuto, application, connection, session, WScriptShell, fso; // Declares variables for SAP GUI automation, file handling, and WScript
 
 var exportPath = "C:\\Users\\OtienBer\\Desktop\\"; // Directory path where the file will be saved
@@ -49,7 +48,9 @@ if (fso.FileExists(fullPath)) { // If the file exists
     fullPath = exportPath + finalFileName; // Update the full file path with the new unique name
 }
 
-WScript.Echo("Final file name will be: " + finalFileName); // Output the final file name for logging/debugging
+// WScript.Echo("Final file name will be: " + finalFileName); // Output the final file name for logging/debugging
+var WshShell = new ActiveXObject("WScript.Shell");
+WshShell.Popup("Final file name will be: " + finalFileName, 2, "Information", 64);
 
 // === SAP GUI Automation starts here ===
 
@@ -69,7 +70,7 @@ try {
     // Ignore if WScript is not defined (run outside Windows Script Host)
 }
 
-// === SAP GUI Automation Steps: For data extraction in SAP TCode SE16N for LIKP ===
+// === SAP GUI Automation Steps ===
 
 // Maximize the SAP window to ensure visibility for automation
 session.findById("wnd[0]").maximize(); 
@@ -124,4 +125,11 @@ session.findById("wnd[1]/usr/ctxtDY_FILENAME").caretPosition = finalFileName.len
 session.findById("wnd[1]/tbar[0]/btn[0]").press(); // Press the "Save" button to export the file
 
 // End of Script: Output the final path where the file was saved
-WScript.Echo("Export completed to: " + fullPath); // Log the full path of the exported file
+// WScript.Echo("Export completed to: " + fullPath); // Log the full path of the exported file
+
+// var excelApp = new ActiveXObject("Excel.Application"); // Create Excel application object (session)
+// make sure GRNs is opened by the same Excel.Application object (rather than as a separate instance)
+var excelApp = GetObject("", "Excel.Application"); // Get the current instance of Excel if already running; CreateObject always creates a new instance of Excel.
+
+excelApp.Visible = true; // Make Excel visible
+excelApp.Workbooks.Open(fullPath); // Open the saved file in Excel (OPTIONAL)
