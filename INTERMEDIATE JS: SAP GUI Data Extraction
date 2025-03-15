@@ -1,0 +1,195 @@
+/*
+RUNNING JAVASCRIPT FILE FOR SAP DATA EXTRACTION USING VBA
+===================== CONSIDER BELOW VBA ====================
+Sub FGSAPStocks()
+' Set dynamic dates for SAP
+    Dim ws As Worksheet
+    Dim sttkDate As String
+    Dim lowDate As String
+    Dim highDate As String
+    Dim jsPath As String
+    Dim shellCommand As String
+    Dim functionName As String
+    
+    Set ws = ThisWorkbook.Sheets("Closing Stocks SAP - PHY")
+    
+    sttkDate = ws.Range("AJ1").Value
+    lowDate = ws.Range("AJ2").Value
+    highDate = ws.Range("AJ3").Value
+    
+    ' Path to your JScript file
+    jsPath = "C:\Users\OtienBer\Desktop\KSMFGSAP.js"
+    
+    ' Function name to run inside the JS file
+    functionName = "KSMFGSAPStocks"
+
+    ' Restart SAP to prevent copying cached data from previous sessions
+    Dim sapPath As String
+    sapPath = "C:\Program Files\SAP\FrontEnd\SAPGUI\saplogon.exe" ' Update if needed. Research on sapshcut.exe
+    
+    ' Close SAP if running
+    Dim objWMI As Object, objProcess As Object, colProcesses As Object
+    Set objWMI = GetObject("winmgmts:\\.\root\cimv2")
+    Set colProcesses = objWMI.ExecQuery("SELECT * FROM Win32_Process WHERE Name = 'saplogon.exe'")
+    
+    If colProcesses.Count > 0 Then
+        For Each objProcess In colProcesses
+            objProcess.Terminate
+        Next objProcess
+        ' MsgBox "SAP ECC Production (DEP) closed successfully.", vbInformation
+        Application.Wait (Now + TimeValue("00:00:01")) ' Wait before reopening
+    Else
+        MsgBox "SAP ECC Production (DEP) is not running.", vbExclamation
+    End If
+    
+    ' Reopen SAP
+    On Error Resume Next
+    shell sapPath & " -desc ""DEP - ECC Production"" -message ""server sapeccDEP.diageo.net"" -group ""SPACE""", vbNormalFocus
+    On Error GoTo 0
+    
+    Application.Wait (Now + TimeValue("00:00:10")) ' Adjust waiting time
+    
+    If IsSAPRunning Then
+        ' MsgBox "SAP ECC Production (DEP) reopened successfully.", vbInformation
+    Else
+        MsgBox "Failed to reopen SAP ECC Production (DEP).", vbExclamation
+    End If
+    
+    Set colProcesses = Nothing
+    Set objWMI = Nothing
+    
+    ' Command to run JScript with arguments (function name + dates)
+    shellCommand = "wscript.exe """ & jsPath & """ """ & functionName & """ """ & sttkDate & """ """ & lowDate & """ """ & highDate & """"
+    ' wscript.exe is a Windows command that runs .js (JScript) or .vbs (VBScript) files outside Excel, in Windows Script Host (WSH).
+    ' wscript.exe => This is the Windows command-line tool used to execute script files like .js or .vbs.
+    ' """ & jsPath & """ => This injects the full path to the JavaScript file you want to run. You add double quotes around
+    ' the path in case it contains spaces. E.g., C:\My Folder\script.js.
+    ' """ & functionName & """ => This passes the function name to the script so only that function is run inside the JS file.
+    ' """ & sttkDate & """ => This passes the first argument (Stock Take Date) to the script.
+    ' """ & lowDate & """ => This passes the second argument (Low Date).
+    ' """ & highDate & """ => This passes the third argument (High Date).
+    ' Each is wrapped in quotes to handle any spaces or special characters.
+    
+    ' Debug Print (Optional)
+    ' Debug.Print shellCommand
+    
+    ' Execute the command
+    Call shell(shellCommand, vbNormalFocus)
+
+End Sub
+
+
+*/
+
+if (WScript.Arguments.length >= 4) {
+    var functionName = WScript.Arguments(0);
+    var sttkDate = WScript.Arguments(1);
+    var lowDate = WScript.Arguments(2);
+    var highDate = WScript.Arguments(3);
+
+    if (functionName === "KSMFGSAPStocks") {
+        KSMFGSAPStocks(sttkDate, lowDate, highDate);
+    } else {
+        WScript.Echo("Function name not recognized.");
+    }
+} else {
+    WScript.Echo("Incorrect number of arguments.");
+}
+function KSMFGSAPStocks(sttkDate, lowDate, highDate) {
+    // SAP GUI Automation
+    var sapGuiAuto = GetObject("SAPGUI");
+    var app = sapGuiAuto.GetScriptingEngine();
+    var connection = app.Children(0);
+    var session = connection.Children(0);
+
+    if (typeof(WScript) !== "undefined") {
+        WScript.ConnectObject(session, "on");
+        WScript.ConnectObject(app, "on");
+    }
+
+    // MB5B Process
+    session.findById("wnd[0]").maximize();
+    session.findById("wnd[0]/tbar[0]/okcd").Text = "/nmb5b";
+    session.findById("wnd[0]").sendVKey(0);
+    session.findById("wnd[0]/usr/btn%_WERKS_%_APP_%-VALU_PUSH").press();
+    session.findById("wnd[1]/usr/tabsTAB_STRIP/tabpSIVA/ssubSCREEN_HEADER:SAPLALDB:3010/tblSAPLALDBSINGLE").Columns.elementAt(1).Width = 13;
+    session.findById("wnd[1]/usr/tabsTAB_STRIP/tabpSIVA/ssubSCREEN_HEADER:SAPLALDB:3010/tblSAPLALDBSINGLE/ctxtRSCSEL_255-SLOW_I[1,0]").Text = "kbs2";
+    session.findById("wnd[1]/usr/tabsTAB_STRIP/tabpSIVA/ssubSCREEN_HEADER:SAPLALDB:3010/tblSAPLALDBSINGLE/ctxtRSCSEL_255-SLOW_I[1,1]").Text = "uds2";
+    session.findById("wnd[1]/usr/tabsTAB_STRIP/tabpSIVA/ssubSCREEN_HEADER:SAPLALDB:3010/tblSAPLALDBSINGLE/ctxtRSCSEL_255-SLOW_I[1,1]").SetFocus();
+    session.findById("wnd[1]/usr/tabsTAB_STRIP/tabpSIVA/ssubSCREEN_HEADER:SAPLALDB:3010/tblSAPLALDBSINGLE/ctxtRSCSEL_255-SLOW_I[1,1]").caretPosition = 4;
+    session.findById("wnd[1]/tbar[0]/btn[8]").press();
+    session.findById("wnd[0]/usr/ctxtLGORT-LOW").SetFocus();
+    session.findById("wnd[0]/usr/ctxtLGORT-LOW").caretPosition = 0;
+    session.findById("wnd[0]/usr/btn%_LGORT_%_APP_%-VALU_PUSH").press();
+    session.findById("wnd[1]/usr/tabsTAB_STRIP/tabpSIVA/ssubSCREEN_HEADER:SAPLALDB:3010/tblSAPLALDBSINGLE/ctxtRSCSEL_255-SLOW_I[1,0]").Text = "5000";
+    session.findById("wnd[1]/usr/tabsTAB_STRIP/tabpSIVA/ssubSCREEN_HEADER:SAPLALDB:3010/tblSAPLALDBSINGLE/ctxtRSCSEL_255-SLOW_I[1,1]").Text = "5010";
+    session.findById("wnd[1]/usr/tabsTAB_STRIP/tabpSIVA/ssubSCREEN_HEADER:SAPLALDB:3010/tblSAPLALDBSINGLE/ctxtRSCSEL_255-SLOW_I[1,1]").SetFocus();
+    session.findById("wnd[1]/usr/tabsTAB_STRIP/tabpSIVA/ssubSCREEN_HEADER:SAPLALDB:3010/tblSAPLALDBSINGLE/ctxtRSCSEL_255-SLOW_I[1,1]").caretPosition = 4;
+    session.findById("wnd[1]/tbar[0]/btn[8]").press();
+    session.findById("wnd[0]/usr/ctxtDATUM-LOW").Text = sttkDate;
+    session.findById("wnd[0]/usr/ctxtDATUM-HIGH").Text = highDate;
+    session.findById("wnd[0]/usr/ctxtPA_SFLVA").Text = "BANAYAHU-2";
+    session.findById("wnd[0]/usr/ctxtPA_SFLVA").SetFocus();
+    session.findById("wnd[0]/usr/ctxtPA_SFLVA").caretPosition = 10;
+    session.findById("wnd[0]/tbar[1]/btn[8]").press();
+    session.findById("wnd[0]/mbar/menu[3]/menu[6]/menu[0]").Select();
+    session.findById("wnd[0]/usr/lbl[94,1]").SetFocus();
+    session.findById("wnd[0]/usr/lbl[94,1]").caretPosition = 5;
+    session.findById("wnd[0]").sendVKey(2);
+    session.findById("wnd[0]/tbar[1]/btn[38]").press();
+    session.findById("wnd[1]/usr/ssub%_SUBSCREEN_FREESEL:SAPLSSEL:1105/btn%_%%DYN001_%_APP_%-VALU_PUSH").press();
+    session.findById("wnd[2]/tbar[0]/btn[8]").press();
+    session.findById("wnd[1]/usr/ssub%_SUBSCREEN_FREESEL:SAPLSSEL:1105/btn%_%%DYN002_%_APP_%-VALU_PUSH").press();
+    session.findById("wnd[2]").Close();
+    session.findById("wnd[1]/usr/ssub%_SUBSCREEN_FREESEL:SAPLSSEL:1105/txt%%DYN002-LOW").SetFocus();
+    session.findById("wnd[1]/usr/ssub%_SUBSCREEN_FREESEL:SAPLSSEL:1105/txt%%DYN002-LOW").caretPosition = 6;
+    session.findById("wnd[1]/tbar[0]/btn[2]").press();
+    session.findById("wnd[2]/usr/cntlOPTION_CONTAINER/shellcont/shell").setCurrentCell(5, "TEXT");
+    session.findById("wnd[2]/usr/cntlOPTION_CONTAINER/shellcont/shell").selectedRows = "5";
+    session.findById("wnd[2]/usr/cntlOPTION_CONTAINER/shellcont/shell").doubleClickCurrentCell();
+    session.findById("wnd[1]/tbar[0]/btn[0]").press();
+    session.findById("wnd[0]/mbar/menu[0]/menu[1]/menu[2]").Select();
+    session.findById("wnd[1]/usr/subSUBSCREEN_STEPLOOP:SAPLSPO5:0150/sub:SAPLSPO5:0150/radSPOPLI-SELFLAG[1,0]").Select();
+    session.findById("wnd[1]/usr/subSUBSCREEN_STEPLOOP:SAPLSPO5:0150/sub:SAPLSPO5:0150/radSPOPLI-SELFLAG[1,0]").SetFocus();
+    session.findById("wnd[1]/tbar[0]/btn[0]").press();
+    session.findById("wnd[1]/usr/ctxtDY_PATH").Text = "C:\\Users\\OtienBer\\Desktop";
+    session.findById("wnd[1]/usr/ctxtDY_FILENAME").Text = "KSMFGMB5B.XLS";
+    session.findById("wnd[1]/usr/ctxtDY_FILENAME").caretPosition = 6;
+    session.findById("wnd[1]/tbar[0]/btn[0]").press();
+
+    // MB51 Process (similar structure to MB5B)
+    session.findById("wnd[0]/tbar[0]/okcd").Text = "/NMB51";
+    session.findById("wnd[0]").sendVKey(0);
+    session.findById("wnd[0]/usr/btn%_WERKS_%_APP_%-VALU_PUSH").press();
+    session.findById("wnd[1]/usr/tabsTAB_STRIP/tabpSIVA/ssubSCREEN_HEADER:SAPLALDB:3010/tblSAPLALDBSINGLE").Columns.elementAt(1).Width = 13;
+    session.findById("wnd[1]/usr/tabsTAB_STRIP/tabpSIVA/ssubSCREEN_HEADER:SAPLALDB:3010/tblSAPLALDBSINGLE/ctxtRSCSEL_255-SLOW_I[1,0]").Text = "KBS2";
+    session.findById("wnd[1]/usr/tabsTAB_STRIP/tabpSIVA/ssubSCREEN_HEADER:SAPLALDB:3010/tblSAPLALDBSINGLE/ctxtRSCSEL_255-SLOW_I[1,1]").Text = "UDS2";
+    session.findById("wnd[1]/usr/tabsTAB_STRIP/tabpSIVA/ssubSCREEN_HEADER:SAPLALDB:3010/tblSAPLALDBSINGLE/ctxtRSCSEL_255-SLOW_I[1,1]").SetFocus();
+    session.findById("wnd[1]/usr/tabsTAB_STRIP/tabpSIVA/ssubSCREEN_HEADER:SAPLALDB:3010/tblSAPLALDBSINGLE/ctxtRSCSEL_255-SLOW_I[1,1]").caretPosition = 4;
+    session.findById("wnd[1]/tbar[0]/btn[8]").press();
+    session.findById("wnd[0]/usr/ctxtLGORT-LOW").Text = "5000";
+    session.findById("wnd[0]/usr/ctxtLGORT-LOW").SetFocus();
+    session.findById("wnd[0]/usr/ctxtLGORT-LOW").caretPosition = 4;
+    session.findById("wnd[0]/usr/btn%_LGORT_%_APP_%-VALU_PUSH").press();
+    session.findById("wnd[1]/usr/tabsTAB_STRIP/tabpSIVA/ssubSCREEN_HEADER:SAPLALDB:3010/tblSAPLALDBSINGLE/ctxtRSCSEL_255-SLOW_I[1,1]").Text = "5010";
+    session.findById("wnd[1]/usr/tabsTAB_STRIP/tabpSIVA/ssubSCREEN_HEADER:SAPLALDB:3010/tblSAPLALDBSINGLE/ctxtRSCSEL_255-SLOW_I[1,1]").SetFocus();
+    session.findById("wnd[1]/usr/tabsTAB_STRIP/tabpSIVA/ssubSCREEN_HEADER:SAPLALDB:3010/tblSAPLALDBSINGLE/ctxtRSCSEL_255-SLOW_I[1,1]").caretPosition = 4;
+    session.findById("wnd[1]/tbar[0]/btn[8]").press();
+    session.findById("wnd[0]/usr/ctxtBUDAT-LOW").Text = lowDate;
+    session.findById("wnd[0]/usr/ctxtBUDAT-HIGH").Text = highDate;
+    session.findById("wnd[0]/usr/ctxtALV_DEF").Text = "BANAYAHU-2";
+    session.findById("wnd[0]/usr/ctxtALV_DEF").SetFocus();
+    session.findById("wnd[0]/usr/ctxtALV_DEF").caretPosition = 10;
+    session.findById("wnd[0]").sendVKey (0);
+    session.findById("wnd[0]/tbar[1]/btn[8]").press();
+    session.findById("wnd[0]/mbar/menu[3]/menu[6]/menu[0]").Select();
+    session.findById("wnd[0]").sendVKey (9);
+    session.findById("wnd[1]/usr/subSUBSCREEN_STEPLOOP:SAPLSPO5:0150/sub:SAPLSPO5:0150/radSPOPLI-SELFLAG[1,0]").Select();
+    session.findById("wnd[1]/usr/subSUBSCREEN_STEPLOOP:SAPLSPO5:0150/sub:SAPLSPO5:0150/radSPOPLI-SELFLAG[1,0]").SetFocus();
+    session.findById("wnd[1]/tbar[0]/btn[0]").press();
+    session.findById("wnd[1]/usr/ctxtDY_PATH").Text = "C:\\Users\\OtienBer\\Desktop"; // Use double backlash
+    session.findById("wnd[1]/usr/ctxtDY_FILENAME").Text = "KSMFGMB51.XLS";
+    session.findById("wnd[1]/usr/ctxtDY_FILENAME").caretPosition = 12;
+    session.findById("wnd[1]/tbar[0]/btn[0]").press();
+}
+
